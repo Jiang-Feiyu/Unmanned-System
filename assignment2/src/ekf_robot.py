@@ -109,12 +109,46 @@ class RobotEKF(RobotBase):
 		
 		"*** YOUR CODE STARTS HERE ***"
 
+		# Extract current state and velocities
+		x, y, theta = mu.flatten()  # Ensure mu is flattened to a 1D array
+		v, omega = vel.flatten()    # Ensure vel is flattened to a 1D array
+
+		# Print current state and velocities
+		print(f"Step: {kwargs.get('step', 0)}, State: x={x}, y={y}, theta={theta}, v={v}, omega={omega}")
+
+		# 1. Compute the predicted mean (mu_bar)
+		if abs(omega) > 1e-5:  # Avoid division by zero for small omega
+			mu_bar = np.array([
+				[x + v * np.cos(theta) * dt],
+				[y + v * np.sin(theta) * dt],
+				[theta + omega * dt]
+			]).reshape(-1, 1)  # Reshape to ensure mu_bar is a column vector
+		else:
+			mu_bar = mu + np.array([
+            	v * np.cos(theta) * dt,
+            	v * np.sin(theta) * dt,
+            	0
+        	]).reshape(-1, 1)  # Reshape to ensure mu_bar is a column vector
+    
+    	# 2. Compute the Jacobian matrix G_t
+		G_t = np.array([
+        	[1, 0, -v * dt * np.sin(theta)],
+			[0, 1,  v * dt * np.cos(theta)],
+			[0, 0, 1]
+		])
+	
+	    # Print the Jacobian matrix
+		print(f"Jacobian G_t:\n{G_t}")
+		
+		# 3. Compute the predicted covariance (sigma_bar)
+		sigma_bar = G_t @ sigma @ G_t.T
+
+		# Print updated covariance matrix
+		print(f"Updated covariance sigma_bar:\n{sigma_bar}")
+
 		# Compute the mean 
-		
 
-
-		# Compute the covariance matrix
-		
+		# Compute the covariance matrix		
 
 		"*** YOUR CODE ENDS HERE ***"
 		self.e_state['mean'] = mu_bar
