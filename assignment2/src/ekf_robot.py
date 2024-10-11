@@ -7,7 +7,7 @@ from ir_sim.util.util import get_transform, WrapToPi
 
 class RobotEKF(RobotBase):
 
-	student_id = None
+	student_id = 3035770800
 
 	
 	robot_type = 'custom'
@@ -68,8 +68,19 @@ class RobotEKF(RobotBase):
 		noise  = np.random.normal(0, R_hat)
 
 		"*** YOUR CODE STARTS HERE ***"
-		
-
+		# Extract the current state values
+		x, y, theta = state
+    
+    	# Extract velocities
+		v, omega = vel
+    
+    	# Compute the next state using the motion model
+		next_x = x + v * np.cos(theta) * dt + noise[0]  # Add noise for x
+		next_y = y + v * np.sin(theta) * dt + noise[1]  # Add noise for y
+		next_theta = theta + omega * dt + noise[2]  # Add noise for theta
+    
+    	# Package the next state into a 3x1 matrix
+		next_state = np.array([next_x, next_y, next_theta])
 
 		"*** YOUR CODE ENDS HERE ***"
 		return next_state
@@ -97,9 +108,6 @@ class RobotEKF(RobotBase):
 		sigma = self.e_state['std']
 		
 		"*** YOUR CODE STARTS HERE ***"
-		# Compute the Jacobian of g called G with respect to the state
-		
-
 
 		# Compute the mean 
 		
