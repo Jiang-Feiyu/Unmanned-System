@@ -141,7 +141,7 @@ class RobotEKF(RobotBase):
 		print(f"Jacobian G_t:\n{G_t}")
 		
 		# 3. Compute the predicted covariance (sigma_bar)
-		sigma_bar = G_t @ sigma @ G_t.T
+		sigma_bar = G_t @ sigma @ G_t.T + R
 
 		# Print updated covariance matrix
 		print(f"Updated covariance sigma_bar:\n{sigma_bar}")
