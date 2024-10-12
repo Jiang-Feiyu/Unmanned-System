@@ -85,7 +85,6 @@ class RobotEKF(RobotBase):
 		"*** YOUR CODE ENDS HERE ***"
 		return next_state
 
-	
 	def ekf_predict(self, vel, **kwargs):
 		r"""
 		Question 2
@@ -189,22 +188,50 @@ class RobotEKF(RobotBase):
 		for lm in lm_measurements:
 			# Update mu_bar and sigma_bar with each measurement individually,
 			"*** YOUR CODE STARTS HERE ***"
-			
-			# Calculate the expected measurement vector
-			
+			# Extract landmark ID, range, and angle from measurements
+			lm_id = lm['id']
+			range_measurement = lm['range']
+			angle_measurement = lm['angle']
 
+        	# Landmark's position
+			lm_position = lm_map[lm_id]
+			lm_x, lm_y = lm_position[0], lm_position[1]
 
-			# Compute H
-			
+        	# Calculate the expected measurement vector
+			delta_x = float(lm_x) - float(mu_bar[0]) 
+			delta_y = float(lm_y) - float(mu_bar[1])  
+			expected_range = np.sqrt(delta_x**2 + delta_y**2)
 
+        	# Avoid division by zero
+			if expected_range == 0:
+				expected_range = 1e-6  # Small value to prevent division by zero
+
+        	# Compute H (Jacobian of the measurement function)
+			H = np.zeros((2, 3))  # Initialize H with the correct shape
+			H[0, 0] = delta_x / expected_range
+			H[0, 1] = -delta_y / expected_range
+			H[0, 2] = 0
+
+			H[1, 0] = - delta_y / expected_range**(1/2)
+			H[1, 1] = -delta_x / expected_range**(1/2)
+			H[1, 2] = -1
+
+        	# Compute the innovation (residual)
+			innovation = np.array([[range_measurement - expected_range]])  # Ensure innovation is a column vector
+
+			# Compute the Jacobian of the measurement noise
+			R = H @ sigma_bar @ H.T + Q
 
 			# Gain of Kalman
-			
+			K = sigma_bar @ H.T @ np.linalg.inv(R)
 
+			# Kalman correction for mu_bar and sigma_bar
+			mu_bar = mu_bar.reshape(-1, 1)  # Ensure mu_bar is a column vector
 
-			# Kalman correction for mean_bar and covariance_bar
-			
-
+			# Ensure innovation is a 2x1 vector for proper matrix multiplication
+			innovation = np.array([[range_measurement - expected_range], [0]])  # Adding a placeholder for angle
+			mu_bar += K @ innovation  # Now it should be compatible
+			sigma_bar = sigma_bar - K @ H @ sigma_bar
 
 			"*** YOUR CODE ENDS HERE ***"
 			pass
