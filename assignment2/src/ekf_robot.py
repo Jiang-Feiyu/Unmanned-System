@@ -191,7 +191,6 @@ class RobotEKF(RobotBase):
 			# Extract landmark ID, range, and angle from measurements
 			lm_id = lm['id']
 			range_measurement = lm['range']
-			angle_measurement = lm['angle']
 
         	# Landmark's position
 			lm_position = lm_map[lm_id]
@@ -200,41 +199,34 @@ class RobotEKF(RobotBase):
         	# Calculate the expected measurement vector
 			delta_x = float(lm_x) - float(mu_bar[0]) 
 			delta_y = float(lm_y) - float(mu_bar[1])  
+
 			expected_range = np.sqrt(delta_x**2 + delta_y**2)
 
-        	# Avoid division by zero
-			if expected_range == 0:
-				expected_range = 1e-6  # Small value to prevent division by zero
+        	# Compute the Jacobian H (partial derivatives of the measurement function wrt the state)
+			H = np.zeros((1, 3))
+			H[0, 0] = -delta_x / expected_range  # d(z)/dx
+			H[0, 1] = -delta_y / expected_range  # d(z)/dy
+			H[0, 2] = 0                          # d(z)/dtheta (no bearing used here)
 
-        	# Compute H (Jacobian of the measurement function)
-			H = np.zeros((2, 3))  # Initialize H with the correct shape
-			H[0, 0] = delta_x / expected_range
-			H[0, 1] = -delta_y / expected_range
-			H[0, 2] = 0
+        	# Compute the innovation covariance S_t
+			S_t = H @ sigma_bar @ H.T + Q  # S_t is a scalar since we have 1 range measurement
 
-			H[1, 0] = - delta_y / expected_range**(1/2)
-			H[1, 1] = -delta_x / expected_range**(1/2)
-			H[1, 2] = -1
+        	# Compute the Kalman gain
+			K_t = sigma_bar @ H.T @ np.linalg.inv(S_t)  # Kalman gain
 
-        	# Compute the innovation (residual)
-			innovation = np.array([[range_measurement - expected_range]])  # Ensure innovation is a column vector
+        	# Measurement innovation (difference between actual and predicted range)
+			z_t = np.array([range_measurement])  # Actual range from the sensor
+			z_hat = np.array([expected_range])   # Predicted range to the landmark
 
-			# Compute the Jacobian of the measurement noise
-			R = H @ sigma_bar @ H.T + Q
+        	# Update the state mean (mu_bar) using the Kalman gain and measurement innovation
+			mu_bar = mu_bar + (K_t @ (z_t - z_hat)).reshape(-1, 1)
 
-			# Gain of Kalman
-			K = sigma_bar @ H.T @ np.linalg.inv(R)
-
-			# Kalman correction for mu_bar and sigma_bar
-			mu_bar = mu_bar.reshape(-1, 1)  # Ensure mu_bar is a column vector
-
-			# Ensure innovation is a 2x1 vector for proper matrix multiplication
-			innovation = np.array([[range_measurement - expected_range], [0]])  # Adding a placeholder for angle
-			mu_bar += K @ innovation  # Now it should be compatible
-			sigma_bar = sigma_bar - K @ H @ sigma_bar
-
+        	# Update the covariance (sigma_bar) after measurement update
+			sigma_bar = sigma_bar - K_t @ H @ sigma_bar
+			
 			"*** YOUR CODE ENDS HERE ***"
 			pass
+
 		mu    = mu_bar
 		sigma = sigma_bar
 		self.e_state['mean'] = mu
