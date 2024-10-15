@@ -267,30 +267,53 @@ class RobotEKF(RobotBase):
 		for lm in lm_measurements:
 			# Update mu_bar and sigma_bar with each measurement individually,
 			"*** YOUR CODE STARTS HERE ***"
+			 # Get landmark information
+			lm_id = lm['id']
+			lm_position = lm_map[lm_id]
+			z_t_k = np.array([lm['range'], lm['angle']])  # Measured range and bearing
+        
+        	# # Landmark position
+			lm_x, lm_y = lm_position[0], lm_position[1]
 
+        	# Expected measurement (z_hat)
 			# Calculate the expected measurement vector
-			
+			delta_x = float(lm_x) - float(mu_bar[0]) 
+			delta_y = float(lm_y) - float(mu_bar[1])  
 
+			q = delta_x**2 + delta_y**2  # Range^2
 
-			# Compute H
-			
+			z_hat_t_k = np.array([
+            	np.sqrt(q),  # Expected range
+            	WrapToPi(np.arctan2(delta_y, delta_x) - mu_bar[2].item())  # Expected bearing
+			])
 
-
-			# Gain of Kalman
-			
-
-
-			# Kalman correction for mean_bar and covariance_bar
-			
-
-
+        	# Compute the Jacobian H_t
+			H_t = np.zeros((2, 3))
+			H_t[1, 0] = delta_y / q # d(z)/dx
+			H_t[1, 1] = -delta_x / q  # d(z)/dy
+			H_t[1, 2] = - 1   
+			H_t[0, 0] = -delta_x / np.sqrt(q)  # d(z)/dx
+			H_t[0, 1] = -delta_y / np.sqrt(q)  # d(z)/dy
+			H_t[0, 2] = 0   
+        
+        	# Calculate the Kalman gain
+			S_t = H_t @ sigma_bar @ H_t.T + Q  # Innovation covariance
+			K_t = sigma_bar @ H_t.T @ np.linalg.inv(S_t)  # Kalman gain
+        
+        	# Measurement residual (z - z_hat)
+			z_diff = z_t_k - z_hat_t_k
+			z_diff[1] = WrapToPi(z_diff[1])  # Wrap angle difference to [-π, π]
+        
+        	# Update mean and covariance
+			mu_bar = mu_bar + (K_t @ z_diff).reshape(-1, 1)
+			sigma_bar = (np.eye(3) - K_t @ H_t) @ sigma_bar
+			print("mu_bar", mu_bar)
 			"*** YOUR CODE ENDS HERE ***"
 			pass
 		mu = mu_bar
 		sigma = sigma_bar
 		self.e_state['mean'] = mu
 		self.e_state['std'] = sigma
-	
 	
 	def get_landmark_map(self, ):
 		env_map = env_param.obstacle_list.copy()
