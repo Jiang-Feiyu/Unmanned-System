@@ -177,6 +177,34 @@ class RobotFastSLAM(RobotBase):
 
 
 					# Remain default importance weight (skip), at line 10
+
+					# 初始化均值（反向测量模型）
+					range_m = lm['range']
+					angle_m = lm['angle']
+					px = particle.state[0, 0]
+					py = particle.state[1, 0]
+					ptheta = particle.state[2, 0]
+                
+                	# 计算地标位置
+					lm_x = px + range_m * cos(angle_m + ptheta)
+					lm_y = py + range_m * sin(angle_m + ptheta)
+					particle.landmarks[lm_id]['mean'] = np.array([[lm_x], [lm_y]])
+                
+                	# 计算雅可比矩阵
+					dx = lm_x - px
+					dy = lm_y - py
+					q = dx**2 + dy**2
+					q_sqrt = np.sqrt(q)
+                
+					H = np.array([
+                    	[dx/q_sqrt, dy/q_sqrt],
+                    	[-dy/q, dx/q]
+                	])
+                
+                	# 初始化协方差
+					particle.landmarks[lm_id]['std'] = np.linalg.inv(H) @ Q_t @ np.linalg.inv(H).T
+
+
 					"*** YOUR CODE ENDS HERE ***"
 					particle.landmarks[lm_id]['observed'] = True
 					pass
@@ -206,9 +234,47 @@ class RobotFastSLAM(RobotBase):
 					
 
 					# Calculate importance factor w, at line 18
-					w = 1 # Rewrite this line or update w after
+					# w = 1 # Rewrite this line or update w after
 					
-
+					# 获取当前状态和地标位置
+					px = particle.state[0, 0]
+					py = particle.state[1, 0]
+					ptheta = particle.state[2, 0]
+					lm_mean = particle.landmarks[lm_id]['mean']
+					# 获取当前状态和地标位置
+					z = np.array([[lm['range']], [lm['angle']]])
+                
+                	# 预测测量值
+					dx = lm_mean[0, 0] - px
+					dy = lm_mean[1, 0] - py
+					q = dx**2 + dy**2
+					q_sqrt = np.sqrt(q)
+					z_pred = np.array([[q_sqrt],[WrapToPi(np.arctan2(dy, dx) - ptheta)]])
+                
+					# 计算雅可比矩阵
+					H = np.array([
+                    	[dx/q_sqrt, dy/q_sqrt],
+                    	[-dy/q, dx/q]
+                	])
+                
+                	# 测量协方差
+					Q = H @ particle.landmarks[lm_id]['std'] @ H.T + Q_t
+                
+					# 计算卡尔曼增益
+					K = particle.landmarks[lm_id]['std'] @ H.T @ np.linalg.inv(Q)
+                
+                	# 更新均值
+					innovation = z - z_pred
+					innovation[1] = WrapToPi(innovation[1])
+					particle.landmarks[lm_id]['mean'] += K @ innovation
+                
+                	# 更新协方差
+					particle.landmarks[lm_id]['std'] = (np.eye(2) - K @ H) @ particle.landmarks[lm_id]['std']
+                
+                	# 计算重要性权重
+					w = (1.0 / (2 * np.pi * np.sqrt(np.linalg.det(Q)))) * \
+                    	np.exp(-0.5 * innovation.T @ np.linalg.inv(Q) @ innovation)
+		
 					"*** YOUR CODE ENDS HERE ***"
 					particle.weight *= w
 					pass
