@@ -323,6 +323,10 @@ class RobotFastSLAM(RobotBase):
 		# Check whether the resampling requirement is met,
 		# Assign the result to 'requirement'.
 		
+		# 计算是否需要重采样
+		weights_square_sum = sum([p.weight**2 for p in self.particles])
+		n_eff = 1.0 / weights_square_sum
+		requirement = n_eff < self.num_particle / 1.5
 
 		"*** YOUR CODE ENDS HERE ***"
 
@@ -349,7 +353,18 @@ class RobotFastSLAM(RobotBase):
 				# using copy.deepcopy(old_particle) (example).
 				# You should change the weight to the default weight.
 				
-
+				# 计算目标位置U
+				U = r + j * step
+            
+            	# 找到对应的粒子索引
+				while U > c and i < self.num_particle - 1:
+					i += 1
+					c += self.particles[i].weight
+            
+           		# 复制选中的粒子并设置新权重
+				new_particle = copy.deepcopy(self.particles[i])
+				new_particle.weight = 1.0 / self.num_particle
+				new_particles.append(new_particle)
 				
 				"*** YOUR CODE ENDS HERE ***"
 				pass
