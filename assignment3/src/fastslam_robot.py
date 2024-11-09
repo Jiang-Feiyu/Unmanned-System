@@ -119,9 +119,7 @@ class RobotFastSLAM(RobotBase):
 		seed = self.e_rng
 		for particle in self.particles:
 			"*** YOUR CODE STARTS HERE ***"
-
-			
-
+			particle.state = self.motion_model(particle.state, vel, dt, R_t, seed)
 			"*** YOUR CODE ENDS HERE ***"
 			pass
 		return
