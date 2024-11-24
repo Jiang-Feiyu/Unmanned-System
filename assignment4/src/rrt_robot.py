@@ -120,23 +120,15 @@ class RobotRRT(RobotBase):
 
 		for i, node in enumerate(self.nodes):
 			"*** YOUR CODE STARTS HERE ***"
-			# 获取当前节点的状态
-			current_state = node[0]
-
-			# x_target 形状是 (2,1)，需要确保维度匹配
-			current_state = current_state.reshape(-1, 1)
-	
-        	# 计算当前节点到目标点的欧氏距离
-			# dist = np.sqrt(np.sum((current_state - x_target)**2))
-			dist = np.linalg.norm(current_state - x_target)
-        
-        	# 更新最近节点
+			dist = np.linalg.norm(node[0] - x_target)
+			
 			if dist < min_dist:
 				min_dist = dist
-				x_nearest = current_state
+				x_nearest = node[0]
 				index_nearest = i
 			"*** YOUR CODE ENDS HERE ***"
 			pass
+
 		return x_nearest, index_nearest
 
 	def rrt_stear(self, x_nearest, x_rand):
@@ -156,24 +148,14 @@ class RobotRRT(RobotBase):
 		expand_dis = self.p_expand_dis
 		x_new = None
 		"*** YOUR CODE STARTS HERE ***"
-		# 确保维度一致性
-		x_nearest = x_nearest.reshape(-1, 1)
-		x_rand = x_rand.reshape(-1, 1)
-
 		# 计算方向向量
 		direction = x_rand - x_nearest
 
-		# 计算向量范数(长度)
-		# dist = np.sqrt(np.sum(direction**2))
-		dist = np.linalg.norm(direction)
-    
-		if dist <= expand_dis:
-        	# 如果距离小于扩展距离,直接使用随机点
-			x_new = x_rand
-		else:
-        	# 否则在方向上移动expand_dis的距离
-			normalized_direction = direction / dist
-			x_new = x_nearest + normalized_direction * expand_dis
+		# 标准化方向向量
+		direction = direction / np.linalg.norm(direction)
+
+		# 总是移动固定步长
+		x_new = x_nearest + direction * expand_dis
 
 		"*** YOUR CODE ENDS HERE ***"
 		return x_new
@@ -305,12 +287,15 @@ class RobotRRT(RobotBase):
 					# Here Question 1(c) starts
 
 					# Line 7, save the new node to our list
+					# 确保x_new的形状正确
+					x_new = np.array(x_new, dtype=np.float64).reshape(2, 1)
+		
 					# 创建新节点: [状态, 父节点索引]
-					new_node = [x_new, index_nearest]
+					# 创建新节点时确保是深拷贝
+					new_node = [x_new.copy(), int(index_nearest)]
                 
 					# 将新节点添加到树中
 					self.nodes.append(new_node)
-
 					"*** YOUR CODE ENDS HERE ***"
 
 				elif self.p_mode == 'rrt_star':
