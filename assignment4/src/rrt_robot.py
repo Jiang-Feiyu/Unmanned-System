@@ -230,6 +230,18 @@ class RobotRRT(RobotBase):
 
 		# Loop within tree to find all satisfiable node
 		
+		# Calculate r 
+		n = len(self.nodes)  # number of nodes in the tree
+		r = min(gamma * (np.log(n)/n)**(1/d), eta)
+    
+    	# Loop within tree to find all satisfiable node
+		for index, node in enumerate(self.nodes):
+        	# Calculate distance between current node and target
+			distance = np.linalg.norm(node[0] - x_target)
+        
+        	# If distance is within radius r, add node and its index to list
+			if distance < r:
+				node_near_list.append([node, index])
 
 		"*** YOUR CODE ENDS HERE ***"
 
@@ -285,8 +297,6 @@ class RobotRRT(RobotBase):
 				if self.p_mode == 'rrt':
 					"*** YOUR CODE STARTS HERE ***"
 					# Here Question 1(c) starts
-
-					# Line 7, save the new node to our list
 					# 确保x_new的形状正确
 					x_new = np.array(x_new, dtype=np.float64).reshape(2, 1)
 		
@@ -302,25 +312,48 @@ class RobotRRT(RobotBase):
 					"*** YOUR CODE STARTS HERE ***"
 					# Here Question 2(b) starts
 
+					# 确保x_new的形状正确
+					x_new = np.array(x_new, dtype=np.float64).reshape(2, 1)
 					# Line 7, find nodes near new node with state x_new,
 					# get a list saving these nodes and their indexes
-					
+					near_nodes = self.rrt_near(x_new)
 
 
 					# Line 9-12, loop from the list, find node with
 					# the minimum path cost, get its index as well
-					
-
-
+					min_cost = float('inf')
+					min_index = index_nearest
+                
+					for node, idx in near_nodes:
+						if self.rrt_collision_free(node[0], x_new):
+                        	# 计算通过这个节点到新节点的总成本
+							cost = node[2] + self.rrt_cost(node[0], x_new)
+							if cost < min_cost:
+								min_cost = cost
+								min_index = idx
 
 					# Line 8 and 13, save the new node to our rrt_star tree
 					# with form [state, parent_node_index, path_cost]
-					
+					parent_node = self.nodes[min_index]
+					new_cost = parent_node[2] + self.rrt_cost(parent_node[0], x_new)
+					new_node = [x_new.copy(), int(min_index), new_cost]
+					self.nodes.append(new_node)
+					new_node_index = len(self.nodes) - 1
 
 					# Line 14-16, loop from the list, check whether these nodes
 					# can get a shorter path cost when they connect to our new node
 					# If so, update their connection and the cost.
-					
+					for node, idx in near_nodes:
+						if self.rrt_collision_free(x_new, node[0]):
+                        	# 计算通过新节点到这个节点的潜在成本
+							potential_cost = new_cost + self.rrt_cost(x_new, node[0])
+                        
+                        	# 如果新路径更好，更新连接
+							if potential_cost < node[2]:
+                            	# 更新父节点
+								self.nodes[idx][1] = new_node_index
+                            	# 更新成本
+								self.nodes[idx][2] = potential_cost
 
 					"*** YOUR CODE ENDS HERE ***"
 
